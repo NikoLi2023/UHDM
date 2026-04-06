@@ -59,7 +59,7 @@ def init():
     return device
 
 
-def load_checkpoint(model):
+def load_checkpoint(model, device):
     if args.LOAD_PATH:
         load_path = args.LOAD_PATH
         save_path = args.TEST_RESULT_DIR + '/customer'
@@ -69,9 +69,9 @@ def load_checkpoint(model):
         raise NotImplementedError
     mkdir(save_path)
     if load_path.endswith('.pth'):
-        model_state_dict = torch.load(load_path)
+        model_state_dict = torch.load(load_path, map_location=device)
     else:
-        model_state_dict = torch.load(load_path)['state_dict']
+        model_state_dict = torch.load(load_path, map_location=device)['state_dict']
     model.load_state_dict(model_state_dict)
 
     return load_path, save_path, log_path
@@ -182,7 +182,7 @@ def main():
                      ).to(device)
 
     # load checkpoint
-    load_path, save_path, log_path = load_checkpoint(model)
+    load_path, save_path, log_path = load_checkpoint(model, device)
 
     # set logging for recording information or metrics
     set_logging(log_path)
@@ -204,5 +204,6 @@ def main():
 
 if __name__ == '__main__':
     main()
+    print("complete demo test!")
 
 
