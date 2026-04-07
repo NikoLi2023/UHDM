@@ -1,3 +1,4 @@
+import os
 import datetime
 import logging
 import lpips
@@ -12,7 +13,6 @@ import torch.nn.functional as F
 import torch.nn as nn
 from tensorboardX import SummaryWriter
 import torch.optim as optim
-import os
 from model.model import model_fn_decorator
 from model.nets import my_model
 from dataset.load_data import *
@@ -23,7 +23,7 @@ from config.config import args
 import logging
 from PIL import Image
 from PIL import ImageFile
-import os
+import time
 
 
 def demo_test(args, TestImgLoader, model, save_path, device):
@@ -35,14 +35,17 @@ def demo_test(args, TestImgLoader, model, save_path, device):
         tbar.set_description(desc)
         tbar.update()
 
-
-def init():
+def init(is_GPU:bool =True):
     # Make dirs
     args.TEST_RESULT_DIR = os.path.join(args.SAVE_PREFIX, args.EXP_NAME, 'test_result')
     mkdir(args.TEST_RESULT_DIR)
     args.NETS_DIR = os.path.join(args.SAVE_PREFIX, args.EXP_NAME, 'net_checkpoints')
-    os.environ["CUDA_VISIBLE_DEVICES"] = "%d" % args.GPU_ID
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    # os.environ["CUDA_VISIBLE_DEVICES"] = "%d" % args.GPU_ID
+    if is_GPU:
+        os.environ["CUDA_VISIBLE_DEVICES"] = "%d" % args.GPU_ID
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    else:
+        device = torch.device("cpu")
 
     # random seed
     random.seed(args.SEED)
@@ -57,7 +60,6 @@ def init():
         torch.backends.cudnn.benchmark = True
 
     return device
-
 
 def load_checkpoint(model, device):
     if args.LOAD_PATH:
@@ -75,7 +77,6 @@ def load_checkpoint(model, device):
     model.load_state_dict(model_state_dict)
 
     return load_path, save_path, log_path
-
 
 def set_logging(log_path):
     logger = logging.getLogger()
@@ -111,13 +112,15 @@ def test_model_fn(args, data, model, save_path, device):
         h_odd_pad += 1
 
     in_img = img_pad(in_img, w_pad=w_pad, h_pad=h_pad, w_odd_pad=w_odd_pad, h_odd_pad=h_odd_pad)
-
+    start_time = time.time()
     with torch.no_grad():
         out_1, out_2, out_3 = model(in_img)
         if h_pad != 0:
             out_1 = out_1[:, :, h_pad:-h_odd_pad, :]
         if w_pad != 0:
             out_1 = out_1[:, :, :, w_pad:-w_odd_pad]
+    end_time = time.time()
+    print(' inference time: %s' % (end_time - start_time))
 
     # save images
     if args.SAVE_IMG:
@@ -171,8 +174,9 @@ class demo_data_loader(data.Dataset):
     def __len__(self):
         return len(self.image_list)
 
-def main():
-    device = init()
+def main(is_GPU:bool =True):
+    device = init(is_GPU)
+    print('device: %s' % device.type)
     # load model
     model = my_model(en_feature_num=args.EN_FEATURE_NUM,
                      en_inter_num=args.EN_INTER_NUM,
@@ -201,9 +205,9 @@ def main():
     # test demo
     demo_test(args, DemoImgLoader, model, save_path, device)
 
-
 if __name__ == '__main__':
-    main()
+    timeStart=time.time()
+    main(True)
+    timeEnd=time.time()
+    print('total time: %s' % (timeEnd-timeStart))
     print("complete demo test!")
-
-
