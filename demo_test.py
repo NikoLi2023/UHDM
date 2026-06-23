@@ -174,7 +174,7 @@ class demo_data_loader(data.Dataset):
     def __len__(self):
         return len(self.image_list)
 
-def main(is_GPU:bool =True):
+def main(is_GPU:bool =True,usingFP16=False):
     device = init(is_GPU)
     print('device: %s' % device.type)
     # load model
@@ -200,10 +200,12 @@ def main(is_GPU:bool =True):
     test_path = args.DEMO_DATASET
     # Set test batch size to 1 for avoiding OOM
     args.BATCH_SIZE = 1
+
     DemoImgLoader = create_demo_dataset(args, data_path=test_path)
 
     # test demo
     demo_test(args, DemoImgLoader, model, save_path, device)
+
 
 if __name__ == '__main__':
     timeStart=time.time()
